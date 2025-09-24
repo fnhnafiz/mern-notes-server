@@ -7,6 +7,7 @@ import {
 } from "../interfaces/user.interface";
 import validator from "validator";
 import bcrypt from "bcryptjs";
+import { Note } from "./notes.model";
 
 const addressSchema = new Schema<IAddress>(
   {
@@ -56,6 +57,8 @@ const userSchema = new Schema<IUser, UserStaticMethods, UserInstanceMethods>(
   {
     versionKey: false,
     timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
   }
 );
 
@@ -67,6 +70,24 @@ userSchema.method("hashPassword", async function (password: string) {
 userSchema.static("hashPassword", async function (password: string) {
   const pass = await bcrypt.hash(password, 10);
   return pass;
+});
+
+// hash pasword with pre save hooks in mongoose;
+userSchema.pre("save", async function () {
+  // console.log("Inside the pre save hooks");
+  // console.log("This is:", this);
+  this.password = await bcrypt.hash(this.password, 10);
+});
+
+userSchema.post("findOneAndDelete", async function (doc) {
+  // console.log("This is deleted user with findOneAndDeleted:", doc);
+  if (doc) {
+    await Note.deleteMany({ user: doc._id });
+  }
+});
+
+userSchema.virtual("fullName").get(function () {
+  return `${this.firstName} ${this.lastName}`;
 });
 
 export const User = model<IUser, UserStaticMethods>(
