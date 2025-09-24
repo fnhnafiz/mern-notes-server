@@ -1,15 +1,56 @@
 import express, { Request, Response } from "express";
 import { User } from "../models/user.model";
+import z from "zod";
+import bcrypt from "bcryptjs";
 export const userRoutes = express.Router();
 
+const userZodeSchema = z.object({
+  firstName: z.string(),
+  lastName: z.string(),
+  age: z.number(),
+  email: z.string(),
+  password: z.string(),
+  role: z.string().optional(),
+});
+
 userRoutes.post("/create-user", async (req: Request, res: Response) => {
-  const user = req.body;
-  const newUser = await User.create(user);
-  res.status(201).json({
-    success: true,
-    message: "User created successfully",
-    User: newUser,
-  });
+  try {
+    // const zodBody = await userZodeSchema.parseAsync(req.body);
+    // console.log("Zod Body:", zodBody);
+
+    const body = req.body;
+
+    // const password = await bcrypt.hash(body.password, 10);
+
+    // console.log(password);
+
+    // this is a build in custom instance method
+
+    // const newUser = new User(body);
+
+    // const password = await newUser.hashPassword(body.password);
+    // newUser.password = password;
+    // await newUser.save();
+
+    // this is built in custom static methods
+    const password = await User.hashPassword(body.password);
+    console.log("This is a static hashpassword:", password);
+    body.password = password;
+    const newUser = await User.create(body);
+
+    res.status(201).json({
+      success: true,
+      message: "User created successfully",
+      User: newUser,
+    });
+  } catch (error: any) {
+    console.log(error);
+    res.status(404).json({
+      success: false,
+      message: error.message,
+      User: error,
+    });
+  }
 });
 userRoutes.get("/", async (req: Request, res: Response) => {
   const users = await User.find({});
